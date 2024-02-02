@@ -24,3 +24,6 @@ node_modules/
 
 # Documentation
 docs/
+
+.rush/temp/
+*.log

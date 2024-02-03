@@ -17,6 +17,7 @@ export class TCNetConfiguration {
     appName = "NODE-TCNET";
     broadcastInterface: string | null = null;
     broadcastAddress = "255.255.255.255";
+    brodcastListeningAddress = "";
     requestTimeout = 2000;
     debug = false;
 }
@@ -48,6 +49,7 @@ export class TCNetClient extends EventEmitter {
         if (this.config.broadcastInterface && this.config.broadcastAddress == "255.255.255.255") {
             this.config.broadcastAddress = interfaceAddress(this.config.broadcastInterface);
         }
+        this.config.brodcastListeningAddress ||= this.config.broadcastAddress;
     }
 
     /**
@@ -73,7 +75,7 @@ export class TCNetClient extends EventEmitter {
      */
     public async connect(): Promise<void> {
         this.broadcastSocket = createSocket({ type: "udp4", reuseAddr: true }, this.receiveBroadcast.bind(this));
-        await this.bindSocket(this.broadcastSocket, TCNET_BROADCAST_PORT, this.config.broadcastAddress);
+        await this.bindSocket(this.broadcastSocket, TCNET_BROADCAST_PORT, this.config.brodcastListeningAddress);
         this.broadcastSocket.setBroadcast(true);
 
         this.timestampSocket = createSocket({ type: "udp4", reuseAddr: true }, this.receiveTimestamp.bind(this));

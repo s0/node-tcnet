@@ -13,6 +13,7 @@
     "scripts": {
         "build": "tsc -b",
         "watch": "tsc -b -w",
+        "changeset": "changeset",
         "clean": "tsc -b --clean",
         "lint": "eslint . --ext ts --ignore-pattern '**/*.d.ts'",
         "format:fix": "prettier --write \"./**/*.{ts,html,css,json}\"",

@@ -26,6 +26,9 @@ jobs:
           cache: 'npm'
       - run: npm install --frozen-lockfile
       - run: npm run build
+      - name: Configure NPM to use token
+        run:
+          echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" >> .npmrc
       - name: Run Changeset Workflow
         uses: s0/changesets-action@63d3e3fda2c00696414ca2d6683e046289c13fd8 # v2.1.0
         env:

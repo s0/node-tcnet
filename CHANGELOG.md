@@ -1,5 +1,11 @@
 # @s0/node-tcnet
 
+## 0.3.1
+
+### Patch Changes
+
+-   Fix peer dependency version for pino
+
 ## 0.3.0
 
 ### Minor Changes

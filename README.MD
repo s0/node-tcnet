@@ -1,5 +1,8 @@
 # node-tcnet
 
+> Note: This repo is a fork of this upstream repo:
+> https://github.com/chdxD1/node-tcnet
+
 This library tries implements the TCNet procotol of Showkontrol / Event Imagineering Group / Pioneer DJ described here: https://www.tc-supply.com/tcnet
 
 It requires either Showkontrol / Beatkontrol (https://www.tc-supply.com/home) to be running on a Mac or PRO DJ LINK Bridge on Windows / Mac (https://www.pioneerdj.com/en/product/software/pro-dj-link-bridge/software/)
@@ -19,7 +22,7 @@ It requires either Showkontrol / Beatkontrol (https://www.tc-supply.com/home) to
 
 ## Example
 ```typescript
-import { TCNetConfiguration, PioneerDJTCClient, LayerIndex } from "node-tcnet"
+import { TCNetConfiguration, PioneerDJTCClient, LayerIndex } from "@s0/node-tcnet"
 
 async function main() {
     // Init new TCNet configuration

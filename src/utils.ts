@@ -20,3 +20,9 @@ export function interfaceAddress(ifname: string): string {
         return broadcastAddress(ifname);
     }
 }
+
+export const assert = (condition: boolean, message?: string): void => {
+    if (!condition) {
+        throw new Error(`Assertion failed: ${message}`);
+    }
+};

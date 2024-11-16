@@ -1,6 +1,6 @@
 {
     "name": "@s0/node-tcnet",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "description": "Implements the TC-Supply TCNet protocol used by ShowKontrol and ProDJLink Bridge app from Pioneer",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
@@ -36,7 +36,7 @@
         "tslib": "^2.8.1"
     },
     "peerDependencies": {
-        "pino": "^6.7.1"
+        "pino": "^9.5.0"
     },
     "peerDependenciesMeta": {
         "pino": {

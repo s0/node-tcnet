@@ -9,7 +9,7 @@ import {
     TCNetLayerSyncMaster,
 } from "./network";
 import EventEmitter = require("events");
-import { assert } from "console";
+import { assert } from "./utils";
 
 /**
  * High level implementation of TCNet for PioneerDJ equipment

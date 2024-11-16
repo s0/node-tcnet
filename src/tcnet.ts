@@ -1,5 +1,6 @@
 import { Socket, createSocket, RemoteInfo } from "dgram";
 import EventEmitter = require("events");
+import type { Logger } from "pino";
 import * as nw from "./network";
 import { interfaceAddress } from "./utils";
 
@@ -9,6 +10,7 @@ const TCNET_TIMESTAMP_PORT = 60001;
 type STORED_RESOLVE = (value?: nw.TCNetDataPacket | PromiseLike<nw.TCNetDataPacket> | undefined) => void;
 
 export class TCNetConfiguration {
+    logger: Logger | null = null;
     unicastPort = 65032;
     applicationCode = 0xffff;
     nodeId = Math.floor(Math.random() * 0xffff);
@@ -19,7 +21,6 @@ export class TCNetConfiguration {
     broadcastAddress = "255.255.255.255";
     brodcastListeningAddress = "";
     requestTimeout = 2000;
-    debug = false;
 }
 
 /**
@@ -50,6 +51,10 @@ export class TCNetClient extends EventEmitter {
             this.config.broadcastAddress = interfaceAddress(this.config.broadcastInterface);
         }
         this.config.brodcastListeningAddress ||= this.config.broadcastAddress;
+    }
+
+    public get log() {
+        return this.config.logger;
     }
 
     /**
@@ -129,11 +134,10 @@ export class TCNetClient extends EventEmitter {
             const packet = new packetClass();
 
             if (packet.length() !== -1 && packet.length() !== header.buffer.length) {
-                if (this.config.debug)
-                    console.log(
-                        `Packet has the wrong length (expected: ${packet.length()}, received: ${header.buffer.length})`,
-                        header,
-                    );
+                this.log?.debug(
+                    `Packet has the wrong length (expected: ${packet.length()}, received: ${header.buffer.length})`,
+                    header,
+                );
                 return null;
             }
 
@@ -161,7 +165,7 @@ export class TCNetClient extends EventEmitter {
             if (packet instanceof nw.TCNetOptOutPacket) {
                 if (mgmtHeader.nodeType == nw.NodeType.Master) {
                     // We received an OptIn packet from a server
-                    if (this.config.debug) console.log("Received optout from current Master");
+                    this.log?.debug("Received optout from current Master");
                     if (this.server?.address == rinfo.address && this.server?.port == packet.nodeListenerPort) {
                         this.server = null;
                     }
@@ -172,7 +176,7 @@ export class TCNetClient extends EventEmitter {
                 this.emit("broadcast", packet);
             }
         } else {
-            if (this.config.debug) console.log("Unknown broadcast packet type: " + mgmtHeader.messageType);
+            this.log?.debug(`Unknown broadcast packet type: ${mgmtHeader.messageType}`);
         }
     }
 
@@ -216,7 +220,7 @@ export class TCNetClient extends EventEmitter {
                 }
             }
         } else {
-            if (this.config.debug) console.log("Unknown packet type: " + mgmtHeader.messageType);
+            this.log?.debug(`Unknown packet type: ${mgmtHeader.messageType}`);
         }
     }
 
@@ -229,7 +233,7 @@ export class TCNetClient extends EventEmitter {
         const mgmtHeader = new nw.TCNetManagementHeader(msg);
         mgmtHeader.read();
         if (mgmtHeader.messageType !== nw.TCNetMessageType.Time) {
-            if (this.config.debug) console.log("Received non Time packet on Time port");
+            this.log?.debug("Received non Time packet on Time port");
             return;
         }
 

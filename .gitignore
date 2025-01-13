@@ -2,6 +2,7 @@
 node_modules/
 
 # compiled js files
+dist/
 *.js
 
 # generated mapping files
@@ -27,3 +28,5 @@ docs/
 
 # Submodule use within monorepos
 .turbo/
+
+.tsbuildinfo

@@ -1,4 +1,4 @@
-import * as broadcastAddress from "broadcast-address";
+import broadcastAddress from "broadcast-address";
 import { networkInterfaces, platform } from "os";
 
 export function interfaceAddress(ifname: string): string {

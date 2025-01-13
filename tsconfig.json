@@ -1,16 +1,14 @@
 {
     "compilerOptions": {
         // Output related
-        "target": "es2017",
-        "importHelpers": true,
-        "sourceMap": true,
+        "target": "ES2022",
         "declaration": true,
 
         // Module resolution
-        "moduleResolution": "node",
+        "moduleResolution": "NodeNext",
 
         // Type checking
-        "lib": ["es2017"],
+        "lib": ["es2022", "DOM", "DOM.Iterable"],
         "alwaysStrict": true,
         "forceConsistentCasingInFileNames": true,
         "noFallthroughCasesInSwitch": true,
@@ -20,9 +18,9 @@
         "strictNullChecks": true,
         "skipLibCheck": true,
 
-        "module": "CommonJS",
+        "module": "NodeNext",
         "types": ["node"],
-        "outDir": "./dist"
+        "outDir": "dist"
     },
     "compileOnSave": true,
     "include": ["src/**/*"]

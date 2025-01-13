@@ -2,6 +2,14 @@
     "name": "@s0/node-tcnet",
     "version": "0.3.1",
     "description": "Implements the TC-Supply TCNet protocol used by ShowKontrol and ProDJLink Bridge app from Pioneer",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.js"
+        },
+        "./package.json": "./package.json"
+    },
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "homepage": "https://github.com/chdxD1/node-tcnet#readme",
@@ -11,7 +19,7 @@
         "/dist"
     ],
     "scripts": {
-        "build": "rm -rf dist && tsup",
+        "build": "rm -rf dist && tsup && check-export-map",
         "watch": "tsc -b -w",
         "changeset": "changeset",
         "clean": "tsc -b --clean",
@@ -25,6 +33,7 @@
         "@types/node": "^15.12.5",
         "@typescript-eslint/eslint-plugin": "^4.22.1",
         "@typescript-eslint/parser": "^4.22.1",
+        "check-export-map": "^1.3.1",
         "eslint": "^7.30.0",
         "pino": "^9.5.0",
         "prettier": "^2.2.1",

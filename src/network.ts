@@ -177,36 +177,38 @@ export enum TCNetLayerStatus {
 }
 
 export class TCNetStatusPacket extends TCNetPacket {
-    nodeCount: number;
-    nodeListenerPort: number;
-    layerSource: number[] = new Array(8);
-    layerStatus: TCNetLayerStatus[] = new Array(8);
-    trackID: number[] = new Array(8);
-    smpteMode: number;
-    autoMasterMode: number;
-    layerName: string[] = new Array(8);
+    data: null | {
+        nodeCount: number;
+        nodeListenerPort: number;
+        smpteMode: number;
+        autoMasterMode: number;
+    } = null;
+
+    layers: Array<{
+        source: number;
+        status: TCNetLayerStatus;
+        trackID: number;
+        name: string;
+    }> = new Array(8);
 
     read(): void {
-        this.nodeCount = this.buffer.readUInt16LE(24);
-        this.nodeListenerPort = this.buffer.readUInt16LE(26);
+        this.data = {
+            nodeCount: this.buffer.readUInt16LE(24),
+            nodeListenerPort: this.buffer.readUInt16LE(26),
+            smpteMode: this.buffer.readUInt8(83),
+            autoMasterMode: this.buffer.readUInt8(84),
+        };
 
         for (let n = 0; n < 8; n++) {
-            this.layerSource[n] = this.buffer.readUInt8(34 + n);
-        }
-        for (let n = 0; n < 8; n++) {
-            this.layerStatus[n] = this.buffer.readUInt8(42 + n);
-        }
-        for (let n = 0; n < 8; n++) {
-            this.trackID[n] = this.buffer.readUInt32LE(50 + n * 4);
-        }
-        this.smpteMode = this.buffer.readUInt8(83);
-        this.autoMasterMode = this.buffer.readUInt8(84);
-
-        for (let n = 0; n < 8; n++) {
-            this.layerName[n] = this.buffer
-                .slice(172 + n * 16, 172 + (n + 1) * 16)
-                .toString("ascii")
-                .replace(/\0.*$/g, "");
+            this.layers[n] = {
+                source: this.buffer.readUInt8(34 + n),
+                status: this.buffer.readUInt8(42 + n),
+                trackID: this.buffer.readUInt32LE(50 + n * 4),
+                name: this.buffer
+                    .slice(172 + n * 16, 172 + (n + 1) * 16)
+                    .toString("ascii")
+                    .replace(/\0.*$/g, ""),
+            };
         }
     }
     write(): void {
@@ -267,43 +269,65 @@ export class TCNetTimecode {
     }
 }
 
+export type TCNetTimePacketLayer = {
+    currentTimeMillis: number;
+    totalTimeMillis: number;
+    beatMarker: number;
+    state: TCNetLayerStatus;
+    onAir: number;
+};
+
 export class TCNetTimePacket extends TCNetPacket {
-    layerCurrentTime: number[] = new Array(8);
-    layerTotalTime: number[] = new Array(8);
-    layerBeatmarker: number[] = new Array(8);
-    layerState: TCNetLayerStatus[] = new Array(8);
-    generalSMPTEMode: number;
-    layerTimecode: TCNetTimecode[] = new Array(8);
+    private _layers: TCNetTimePacketLayer[] = new Array(8);
+    private _generalSMPTEMode = 0;
 
     read(): void {
         for (let n = 0; n < 8; n++) {
-            this.layerCurrentTime[n] = this.buffer.readUInt32LE(24 + n * 4);
-            this.layerTotalTime[n] = this.buffer.readUInt32LE(56 + n * 4);
-            this.layerBeatmarker[n] = this.buffer.readUInt8(88 + n);
-            this.layerState[n] = this.buffer.readUInt8(96 + n);
-            this.layerTimecode[n] = new TCNetTimecode();
-            this.layerTimecode[n].read(this.buffer, 106 + n * 6);
+            this._layers[n] = {
+                currentTimeMillis: this.buffer.readUInt32LE(24 + n * 4),
+                totalTimeMillis: this.buffer.readUInt32LE(56 + n * 4),
+                beatMarker: this.buffer.readUInt8(88 + n),
+                state: this.buffer.readUInt8(96 + n),
+                onAir: this.buffer.length > 154 ? this.buffer.readUInt8(154 + n) : 255,
+            };
         }
-        this.generalSMPTEMode = this.buffer.readUInt8(105);
+        this._generalSMPTEMode = this.buffer.readUInt8(105);
     }
     write(): void {
         throw new Error("not supported!");
     }
     length(): number {
-        return 154;
+        switch (this.buffer.length) {
+            case 154:
+            case 162:
+                return this.buffer.length;
+            default:
+                return -1;
+        }
     }
     type(): number {
         return TCNetMessageType.Time;
+    }
+
+    get layers(): TCNetTimePacketLayer[] {
+        return this._layers;
+    }
+
+    get generalSMPTEMode(): number {
+        return this._generalSMPTEMode;
     }
 }
 
 export class TCNetDataPacket extends TCNetPacket {
     dataType: TCNetDataPacketType;
+    /**
+     * 0-indexed layer ID (0-7)
+     */
     layer: number;
 
     read(): void {
         this.dataType = this.buffer.readUInt8(24);
-        this.layer = this.buffer.readUInt8(25);
+        this.layer = this.buffer.readUInt8(25) - 1;
     }
     write(): void {
         assert(0 <= this.dataType && this.dataType <= 255);
@@ -326,28 +350,32 @@ export enum TCNetLayerSyncMaster {
 }
 
 export class TCNetDataPacketMetrics extends TCNetDataPacket {
-    state: TCNetLayerStatus;
-    syncMaster: TCNetLayerSyncMaster;
-    beatMarker: number;
-    trackLength: number;
-    currentPosition: number;
-    speed: number;
-    beatNumber: number;
-    bpm: number;
-    pitchBend: number;
-    trackID: number;
+    data: {
+        state: TCNetLayerStatus;
+        syncMaster: TCNetLayerSyncMaster;
+        beatMarker: number;
+        trackLength: number;
+        currentPosition: number;
+        speed: number;
+        beatNumber: number;
+        bpm: number;
+        pitchBend: number;
+        trackID: number;
+    } | null = null;
 
     read(): void {
-        this.state = this.buffer.readUInt8(27);
-        this.syncMaster = this.buffer.readUInt8(29);
-        this.beatMarker = this.buffer.readUInt8(31);
-        this.trackLength = this.buffer.readUInt32LE(32);
-        this.currentPosition = this.buffer.readUInt32LE(36);
-        this.speed = this.buffer.readUInt32LE(40);
-        this.beatNumber = this.buffer.readUInt32LE(57);
-        this.bpm = this.buffer.readUInt32LE(112);
-        this.pitchBend = this.buffer.readUInt16LE(116);
-        this.trackID = this.buffer.readUInt32LE(118);
+        this.data = {
+            state: this.buffer.readUInt8(27),
+            syncMaster: this.buffer.readUInt8(29),
+            beatMarker: this.buffer.readUInt8(31),
+            trackLength: this.buffer.readUInt32LE(32),
+            currentPosition: this.buffer.readUInt32LE(36),
+            speed: this.buffer.readUInt32LE(40),
+            beatNumber: this.buffer.readUInt32LE(57),
+            bpm: this.buffer.readUInt32LE(112),
+            pitchBend: this.buffer.readInt16LE(116),
+            trackID: this.buffer.readUInt32LE(118),
+        };
     }
 
     write(): void {
@@ -359,16 +387,24 @@ export class TCNetDataPacketMetrics extends TCNetDataPacket {
 }
 
 export class TCNetDataPacketMetadata extends TCNetDataPacket {
-    trackArtist: string;
-    trackTitle: string;
-    trackKey: number;
-    trackID: number;
+    info: {
+        trackArtist: string;
+        trackTitle: string;
+        trackKey: number;
+        trackID: number;
+    } | null = null;
 
     read(): void {
-        this.trackArtist = this.buffer.slice(29, 285).toString("ascii").replace(/\0.*$/g, "");
-        this.trackTitle = this.buffer.slice(285, 541).toString("ascii").replace(/\0.*$/g, "");
-        this.trackKey = this.buffer.readUInt16LE(541);
-        this.trackID = this.buffer.readUInt32LE(543);
+        if (this.header.minorVersion < 5) {
+            throw new Error("Unsupported packet version");
+        }
+
+        this.info = {
+            trackArtist: this.buffer.slice(29, 285).toString("utf16le").replace(/\0/g, ""),
+            trackTitle: this.buffer.slice(285, 541).toString("utf16le").replace(/\0/g, ""),
+            trackKey: this.buffer.readUInt16LE(541),
+            trackID: this.buffer.readUInt32LE(543),
+        };
     }
     write(): void {
         throw new Error("not supported!");
@@ -378,11 +414,11 @@ export class TCNetDataPacketMetadata extends TCNetDataPacket {
     }
 }
 
-export interface Constructable {
-    new (...args: any[]): any;
+export interface Constructable<T> {
+    new (...args: unknown[]): T;
 }
 
-export const TCNetPackets: Record<TCNetMessageType, Constructable | null> = {
+export const TCNetPackets: Record<TCNetMessageType, Constructable<TCNetPacket> | null> = {
     [TCNetMessageType.OptIn]: TCNetOptInPacket,
     [TCNetMessageType.OptOut]: TCNetOptOutPacket,
     [TCNetMessageType.Status]: TCNetStatusPacket,

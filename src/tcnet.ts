@@ -23,6 +23,16 @@ export class TCNetConfiguration {
     requestTimeout = 2000;
 }
 
+const promisifyBasicFunction =
+    <V, A extends unknown[]>(fn: (...args: A) => V) =>
+    (...args: A): Promise<V> => {
+        try {
+            return Promise.resolve(fn(...args));
+        } catch (err) {
+            return Promise.reject(err);
+        }
+    };
+
 /**
  * Low level implementation of the TCNet protocol
  */
@@ -53,7 +63,7 @@ export class TCNetClient extends EventEmitter {
         this.config.brodcastListeningAddress ||= this.config.broadcastAddress;
     }
 
-    public get log() {
+    public get log(): Logger | null {
         return this.config.logger;
     }
 
@@ -99,12 +109,18 @@ export class TCNetClient extends EventEmitter {
     /**
      * Disconnects from TCNet network
      */
-    public disconnect(): void {
+    public disconnect(): Promise<void> {
         clearInterval(this.announcementInterval);
-        this.broadcastSocket.close();
-        this.unicastSocket.close();
         this.removeAllListeners();
         this.connected = false;
+        return Promise.all([
+            promisifyBasicFunction(() => this.broadcastSocket.close()),
+            promisifyBasicFunction(() => this.unicastSocket.close()),
+        ])
+            .catch((err) => {
+                this.log?.error(err);
+            })
+            .then(() => void 0);
     }
 
     /**
@@ -132,6 +148,11 @@ export class TCNetClient extends EventEmitter {
         const packetClass = nw.TCNetPackets[header.messageType];
         if (packetClass !== null) {
             const packet = new packetClass();
+            // Set buffer & header before reading length,
+            // as variable-length messages don't have a well-known fixed size,
+            // and may need to read from buffer to determine the length
+            packet.buffer = header.buffer;
+            packet.header = header;
 
             if (packet.length() !== -1 && packet.length() !== header.buffer.length) {
                 this.log?.debug(
@@ -140,12 +161,11 @@ export class TCNetClient extends EventEmitter {
                 );
                 return null;
             }
-
-            packet.buffer = header.buffer;
-            packet.header = header;
             packet.read();
 
             return packet;
+        } else {
+            this.log?.debug(`Unknown packet type: ${header.messageType} ${nw.TCNetMessageType[header.messageType]}`);
         }
         return null;
     }
@@ -200,6 +220,9 @@ export class TCNetClient extends EventEmitter {
                 dataPacket.dataType = packet.dataType;
                 dataPacket.layer = packet.layer;
                 dataPacket.read();
+                if (this.connected) {
+                    this.emit("data", dataPacket);
+                }
 
                 const pendingRequest = this.requests.get(`${dataPacket.dataType}-${dataPacket.layer}`);
                 if (pendingRequest) {
@@ -220,7 +243,9 @@ export class TCNetClient extends EventEmitter {
                 }
             }
         } else {
-            this.log?.debug(`Unknown packet type: ${mgmtHeader.messageType}`);
+            if (this.connected) {
+                this.emit("broadcast", packet);
+            }
         }
     }
 

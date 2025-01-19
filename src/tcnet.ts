@@ -23,6 +23,16 @@ export class TCNetConfiguration {
     requestTimeout = 2000;
 }
 
+const promisifyBasicFunction =
+    <V, A extends unknown[]>(fn: (...args: A) => V) =>
+    (...args: A): Promise<V> => {
+        try {
+            return Promise.resolve(fn(...args));
+        } catch (err) {
+            return Promise.reject(err);
+        }
+    };
+
 /**
  * Low level implementation of the TCNet protocol
  */
@@ -99,12 +109,18 @@ export class TCNetClient extends EventEmitter {
     /**
      * Disconnects from TCNet network
      */
-    public disconnect(): void {
+    public disconnect(): Promise<void> {
         clearInterval(this.announcementInterval);
-        this.broadcastSocket.close();
-        this.unicastSocket.close();
         this.removeAllListeners();
         this.connected = false;
+        return Promise.all([
+            promisifyBasicFunction(() => this.broadcastSocket.close()),
+            promisifyBasicFunction(() => this.unicastSocket.close()),
+        ])
+            .catch((err) => {
+                this.log?.error(err);
+            })
+            .then(() => void 0);
     }
 
     /**

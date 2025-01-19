@@ -7,16 +7,16 @@ if (!INTERFACE) {
     process.exit(1);
 }
 
+console.log(`Connecting to TCNet on ${INTERFACE}`);
+
+const config = new TCNetConfiguration();
+
+config.broadcastInterface = INTERFACE;
+config.brodcastListeningAddress = "0.0.0.0";
+
+const client = new TCNetClient(config);
+
 const run = async () => {
-    console.log(`Connecting to TCNet on ${INTERFACE}`);
-
-    const config = new TCNetConfiguration();
-
-    config.broadcastInterface = INTERFACE;
-    config.brodcastListeningAddress = "0.0.0.0";
-
-    const client = new TCNetClient(config);
-
     await client.connect();
     console.log("Connected to TCNet");
 
@@ -34,3 +34,9 @@ const run = async () => {
 };
 
 run();
+
+process.on("SIGINT", async () => {
+    console.log("Shutting down TCNet client");
+    await client.disconnect();
+    process.exit(0);
+});

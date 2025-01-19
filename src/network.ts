@@ -267,33 +267,52 @@ export class TCNetTimecode {
     }
 }
 
+export type TCNetTimePacketLayer = {
+  currentTimeMillis: number;
+  totalTimeMillis: number;
+  beatMarker: number;
+  state: TCNetLayerStatus;
+  onAir: number;
+};
+
 export class TCNetTimePacket extends TCNetPacket {
-    layerCurrentTime: number[] = new Array(8);
-    layerTotalTime: number[] = new Array(8);
-    layerBeatmarker: number[] = new Array(8);
-    layerState: TCNetLayerStatus[] = new Array(8);
-    generalSMPTEMode: number;
-    layerTimecode: TCNetTimecode[] = new Array(8);
+    private _layers: TCNetTimePacketLayer[] = new Array(8);
+    private _generalSMPTEMode = 0;
 
     read(): void {
-        for (let n = 0; n < 8; n++) {
-            this.layerCurrentTime[n] = this.buffer.readUInt32LE(24 + n * 4);
-            this.layerTotalTime[n] = this.buffer.readUInt32LE(56 + n * 4);
-            this.layerBeatmarker[n] = this.buffer.readUInt8(88 + n);
-            this.layerState[n] = this.buffer.readUInt8(96 + n);
-            this.layerTimecode[n] = new TCNetTimecode();
-            this.layerTimecode[n].read(this.buffer, 106 + n * 6);
-        }
-        this.generalSMPTEMode = this.buffer.readUInt8(105);
+      for (let n = 0; n < 8; n++) {
+        this._layers[n] = {
+          currentTimeMillis: this.buffer.readUInt32LE(24 + n * 4),
+          totalTimeMillis: this.buffer.readUInt32LE(56 + n * 4),
+          beatMarker: this.buffer.readUInt8(88 + n),
+          state: this.buffer.readUInt8(96 + n),
+          onAir: this.buffer.length > 154 ? this.buffer.readUInt8(154 + n) : 255,
+        };
+      }
+      this._generalSMPTEMode = this.buffer.readUInt8(105);
     }
     write(): void {
         throw new Error("not supported!");
     }
     length(): number {
-        return 154;
+      switch (this.buffer.length) {
+        case 154:
+        case 162:
+          return this.buffer.length;
+        default:
+          return -1;
+      }
     }
     type(): number {
         return TCNetMessageType.Time;
+    }
+
+    get layers(): TCNetTimePacketLayer[] {
+        return this._layers;
+    }
+
+    get generalSMPTEMode(): number {
+        return this._generalSMPTEMode;
     }
 }
 

@@ -378,11 +378,11 @@ export class TCNetDataPacketMetadata extends TCNetDataPacket {
     }
 }
 
-export interface Constructable {
-    new (...args: any[]): any;
+export interface Constructable<T> {
+    new (...args: unknown[]): T;
 }
 
-export const TCNetPackets: Record<TCNetMessageType, Constructable | null> = {
+export const TCNetPackets: Record<TCNetMessageType, Constructable<TCNetPacket> | null> = {
     [TCNetMessageType.OptIn]: TCNetOptInPacket,
     [TCNetMessageType.OptOut]: TCNetOptOutPacket,
     [TCNetMessageType.Status]: TCNetStatusPacket,

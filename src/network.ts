@@ -380,16 +380,27 @@ export class TCNetDataPacketMetrics extends TCNetDataPacket {
 }
 
 export class TCNetDataPacketMetadata extends TCNetDataPacket {
-    trackArtist: string;
-    trackTitle: string;
-    trackKey: number;
-    trackID: number;
+    info: {
+        trackArtist: string;
+        trackTitle: string;
+        trackKey: number;
+        trackID: number;
+    } | null = null;
 
     read(): void {
-        this.trackArtist = this.buffer.slice(29, 285).toString("ascii").replace(/\0.*$/g, "");
-        this.trackTitle = this.buffer.slice(285, 541).toString("ascii").replace(/\0.*$/g, "");
-        this.trackKey = this.buffer.readUInt16LE(541);
-        this.trackID = this.buffer.readUInt32LE(543);
+        // Overwrite layer ID, as for some reason it's 1-based index here
+        this.layer = this.buffer.readUInt8(25) - 1;
+
+        if (this.header.minorVersion < 5) {
+            throw new Error("Unsupported packet version");
+        }
+
+        this.info = {
+            trackArtist: this.buffer.slice(29, 285).toString("utf16le").replace(/\0/g, ""),
+            trackTitle: this.buffer.slice(285, 541).toString("utf16le").replace(/\0/g, ""),
+            trackKey: this.buffer.readUInt16LE(541),
+            trackID: this.buffer.readUInt32LE(543),
+        };
     }
     write(): void {
         throw new Error("not supported!");

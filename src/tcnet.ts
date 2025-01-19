@@ -63,7 +63,7 @@ export class TCNetClient extends EventEmitter {
         this.config.brodcastListeningAddress ||= this.config.broadcastAddress;
     }
 
-    public get log() {
+    public get log(): Logger | null {
         return this.config.logger;
     }
 
@@ -216,6 +216,9 @@ export class TCNetClient extends EventEmitter {
                 dataPacket.dataType = packet.dataType;
                 dataPacket.layer = packet.layer;
                 dataPacket.read();
+                if (this.connected) {
+                    this.emit("data", dataPacket);
+                }
 
                 const pendingRequest = this.requests.get(`${dataPacket.dataType}-${dataPacket.layer}`);
                 if (pendingRequest) {
@@ -236,7 +239,9 @@ export class TCNetClient extends EventEmitter {
                 }
             }
         } else {
-            this.log?.debug(`Unknown packet type: ${mgmtHeader.messageType}`);
+            if (this.connected) {
+                this.emit("broadcast", packet);
+            }
         }
     }
 

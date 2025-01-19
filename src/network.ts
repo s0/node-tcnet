@@ -347,28 +347,32 @@ export enum TCNetLayerSyncMaster {
 }
 
 export class TCNetDataPacketMetrics extends TCNetDataPacket {
-    state: TCNetLayerStatus;
-    syncMaster: TCNetLayerSyncMaster;
-    beatMarker: number;
-    trackLength: number;
-    currentPosition: number;
-    speed: number;
-    beatNumber: number;
-    bpm: number;
-    pitchBend: number;
-    trackID: number;
+    data: {
+        state: TCNetLayerStatus;
+        syncMaster: TCNetLayerSyncMaster;
+        beatMarker: number;
+        trackLength: number;
+        currentPosition: number;
+        speed: number;
+        beatNumber: number;
+        bpm: number;
+        pitchBend: number;
+        trackID: number;
+    } | null = null;
 
     read(): void {
-        this.state = this.buffer.readUInt8(27);
-        this.syncMaster = this.buffer.readUInt8(29);
-        this.beatMarker = this.buffer.readUInt8(31);
-        this.trackLength = this.buffer.readUInt32LE(32);
-        this.currentPosition = this.buffer.readUInt32LE(36);
-        this.speed = this.buffer.readUInt32LE(40);
-        this.beatNumber = this.buffer.readUInt32LE(57);
-        this.bpm = this.buffer.readUInt32LE(112);
-        this.pitchBend = this.buffer.readUInt16LE(116);
-        this.trackID = this.buffer.readUInt32LE(118);
+        this.data = {
+            state: this.buffer.readUInt8(27),
+            syncMaster: this.buffer.readUInt8(29),
+            beatMarker: this.buffer.readUInt8(31),
+            trackLength: this.buffer.readUInt32LE(32),
+            currentPosition: this.buffer.readUInt32LE(36),
+            speed: this.buffer.readUInt32LE(40),
+            beatNumber: this.buffer.readUInt32LE(57),
+            bpm: this.buffer.readUInt32LE(112),
+            pitchBend: this.buffer.readInt16LE(116),
+            trackID: this.buffer.readUInt32LE(118),
+        };
     }
 
     write(): void {

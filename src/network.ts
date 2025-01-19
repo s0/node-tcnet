@@ -320,11 +320,14 @@ export class TCNetTimePacket extends TCNetPacket {
 
 export class TCNetDataPacket extends TCNetPacket {
     dataType: TCNetDataPacketType;
+    /**
+     * 0-indexed layer ID (0-7)
+     */
     layer: number;
 
     read(): void {
         this.dataType = this.buffer.readUInt8(24);
-        this.layer = this.buffer.readUInt8(25);
+        this.layer = this.buffer.readUInt8(25) - 1;
     }
     write(): void {
         assert(0 <= this.dataType && this.dataType <= 255);
@@ -392,9 +395,6 @@ export class TCNetDataPacketMetadata extends TCNetDataPacket {
     } | null = null;
 
     read(): void {
-        // Overwrite layer ID, as for some reason it's 1-based index here
-        this.layer = this.buffer.readUInt8(25) - 1;
-
         if (this.header.minorVersion < 5) {
             throw new Error("Unsupported packet version");
         }

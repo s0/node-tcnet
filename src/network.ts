@@ -177,36 +177,38 @@ export enum TCNetLayerStatus {
 }
 
 export class TCNetStatusPacket extends TCNetPacket {
-    nodeCount: number;
-    nodeListenerPort: number;
-    layerSource: number[] = new Array(8);
-    layerStatus: TCNetLayerStatus[] = new Array(8);
-    trackID: number[] = new Array(8);
-    smpteMode: number;
-    autoMasterMode: number;
-    layerName: string[] = new Array(8);
+    data: null | {
+        nodeCount: number;
+        nodeListenerPort: number;
+        smpteMode: number;
+        autoMasterMode: number;
+    } = null;
+
+    layers: Array<{
+        source: number;
+        status: TCNetLayerStatus;
+        trackID: number;
+        name: string;
+    }> = new Array(8);
 
     read(): void {
-        this.nodeCount = this.buffer.readUInt16LE(24);
-        this.nodeListenerPort = this.buffer.readUInt16LE(26);
+        this.data = {
+            nodeCount: this.buffer.readUInt16LE(24),
+            nodeListenerPort: this.buffer.readUInt16LE(26),
+            smpteMode: this.buffer.readUInt8(83),
+            autoMasterMode: this.buffer.readUInt8(84),
+        };
 
         for (let n = 0; n < 8; n++) {
-            this.layerSource[n] = this.buffer.readUInt8(34 + n);
-        }
-        for (let n = 0; n < 8; n++) {
-            this.layerStatus[n] = this.buffer.readUInt8(42 + n);
-        }
-        for (let n = 0; n < 8; n++) {
-            this.trackID[n] = this.buffer.readUInt32LE(50 + n * 4);
-        }
-        this.smpteMode = this.buffer.readUInt8(83);
-        this.autoMasterMode = this.buffer.readUInt8(84);
-
-        for (let n = 0; n < 8; n++) {
-            this.layerName[n] = this.buffer
-                .slice(172 + n * 16, 172 + (n + 1) * 16)
-                .toString("ascii")
-                .replace(/\0.*$/g, "");
+            this.layers[n] = {
+                source: this.buffer.readUInt8(34 + n),
+                status: this.buffer.readUInt8(42 + n),
+                trackID: this.buffer.readUInt32LE(50 + n * 4),
+                name: this.buffer
+                    .slice(172 + n * 16, 172 + (n + 1) * 16)
+                    .toString("ascii")
+                    .replace(/\0.*$/g, ""),
+            };
         }
     }
     write(): void {
@@ -268,11 +270,11 @@ export class TCNetTimecode {
 }
 
 export type TCNetTimePacketLayer = {
-  currentTimeMillis: number;
-  totalTimeMillis: number;
-  beatMarker: number;
-  state: TCNetLayerStatus;
-  onAir: number;
+    currentTimeMillis: number;
+    totalTimeMillis: number;
+    beatMarker: number;
+    state: TCNetLayerStatus;
+    onAir: number;
 };
 
 export class TCNetTimePacket extends TCNetPacket {
@@ -280,28 +282,28 @@ export class TCNetTimePacket extends TCNetPacket {
     private _generalSMPTEMode = 0;
 
     read(): void {
-      for (let n = 0; n < 8; n++) {
-        this._layers[n] = {
-          currentTimeMillis: this.buffer.readUInt32LE(24 + n * 4),
-          totalTimeMillis: this.buffer.readUInt32LE(56 + n * 4),
-          beatMarker: this.buffer.readUInt8(88 + n),
-          state: this.buffer.readUInt8(96 + n),
-          onAir: this.buffer.length > 154 ? this.buffer.readUInt8(154 + n) : 255,
-        };
-      }
-      this._generalSMPTEMode = this.buffer.readUInt8(105);
+        for (let n = 0; n < 8; n++) {
+            this._layers[n] = {
+                currentTimeMillis: this.buffer.readUInt32LE(24 + n * 4),
+                totalTimeMillis: this.buffer.readUInt32LE(56 + n * 4),
+                beatMarker: this.buffer.readUInt8(88 + n),
+                state: this.buffer.readUInt8(96 + n),
+                onAir: this.buffer.length > 154 ? this.buffer.readUInt8(154 + n) : 255,
+            };
+        }
+        this._generalSMPTEMode = this.buffer.readUInt8(105);
     }
     write(): void {
         throw new Error("not supported!");
     }
     length(): number {
-      switch (this.buffer.length) {
-        case 154:
-        case 162:
-          return this.buffer.length;
-        default:
-          return -1;
-      }
+        switch (this.buffer.length) {
+            case 154:
+            case 162:
+                return this.buffer.length;
+            default:
+                return -1;
+        }
     }
     type(): number {
         return TCNetMessageType.Time;

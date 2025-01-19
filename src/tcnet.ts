@@ -165,7 +165,7 @@ export class TCNetClient extends EventEmitter {
 
             return packet;
         } else {
-          this.log?.debug(`Unknown packet type: ${header.messageType} ${nw.TCNetMessageType[header.messageType]}`);
+            this.log?.debug(`Unknown packet type: ${header.messageType} ${nw.TCNetMessageType[header.messageType]}`);
         }
         return null;
     }

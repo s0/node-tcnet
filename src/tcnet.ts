@@ -148,6 +148,11 @@ export class TCNetClient extends EventEmitter {
         const packetClass = nw.TCNetPackets[header.messageType];
         if (packetClass !== null) {
             const packet = new packetClass();
+            // Set buffer & header before reading length,
+            // as variable-length messages don't have a well-known fixed size,
+            // and may need to read from buffer to determine the length
+            packet.buffer = header.buffer;
+            packet.header = header;
 
             if (packet.length() !== -1 && packet.length() !== header.buffer.length) {
                 this.log?.debug(
@@ -156,12 +161,11 @@ export class TCNetClient extends EventEmitter {
                 );
                 return null;
             }
-
-            packet.buffer = header.buffer;
-            packet.header = header;
             packet.read();
 
             return packet;
+        } else {
+          this.log?.debug(`Unknown packet type: ${header.messageType} ${nw.TCNetMessageType[header.messageType]}`);
         }
         return null;
     }

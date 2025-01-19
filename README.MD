@@ -34,14 +34,23 @@ async function main() {
     config.broadcastInterface = "Ethernet";
     
     // Init new client for Pioneer DJ TCNet
-    const client = new PioneerDJTCClient(config);
+    const client = new TCNetClient(config);
     
     // Wait for connect
     await client.connect();
 
-    // Ask for track information on Layer 1
-    const layer1 = await client.trackInfo(LayerIndex.Layer1);
-    console.log(layer1);
+    // Wait for data packets
+    client.on("data", (packet: TCNetDataPacket) => {
+        console.log("data", packet);
+    });
+
+    client.on("broadcast", (packet: TCNetPacket) => {
+        if (packet instanceof TCNetOptInPacket) {
+            // Don't log these packets
+            return;
+        }
+        console.log("broadcast", packet);
+    });
 }
 
 main();
